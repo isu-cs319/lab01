@@ -1,3 +1,4 @@
+package Template;
 //package lab3;
 
 import java.awt.BorderLayout;

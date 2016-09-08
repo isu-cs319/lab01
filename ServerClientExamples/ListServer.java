@@ -1,3 +1,4 @@
+package ServerClientExamples;
 // GOALS
 //
 // 1. to show sample Server code
@@ -37,7 +38,7 @@ public class ListServer {
 		while (true) { // 3.
 			Socket clientSocket = null;
 			try {
-
+				
 				// 2.1 WAIT FOR CLIENT TO TRY TO CONNECT TO SERVER
 				System.out.println("Waiting for client " + (clientNum + 1)
 						+ " to connect!");

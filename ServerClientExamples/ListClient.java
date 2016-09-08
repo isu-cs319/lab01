@@ -1,3 +1,4 @@
+package ServerClientExamples;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -44,9 +45,6 @@ public class ListClient {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-
-
 	}
 
 	public void handleMessage(String cmd, String s) {
