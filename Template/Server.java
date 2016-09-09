@@ -19,8 +19,8 @@ public class Server {
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
-	private File file = new File("chat.txt");
-
+	//private File file = new File("chat.txt");
+	private PrintWriter writer;
 
 	public Server(int port) {
 		// the port
@@ -28,6 +28,12 @@ public class Server {
 		// ArrayList for the Client list
 		clients = new ArrayList<ClientHandler>();
 		msgs = new ArrayList<ChatMessage>();
+		try{
+			this.writer = new PrintWriter("chat.txt", "UTF-8");
+		}
+		catch (Exception ex){
+			System.out.println("Error creating chat.txt \n" + ex.getMessage());
+		}
 	}
 
 	public void start() {
@@ -45,7 +51,6 @@ public class Server {
 				display("Server waiting for Clients on port " + port + ".");
 
 				Socket socket = serverSocket.accept();  	// accept connection
-				// if I was asked to stop
 				if(!keepGoing)
 					break;
 				ClientHandler t = new ClientHandler(socket);  // make a thread of it
@@ -88,7 +93,18 @@ public class Server {
 		}
 	}
 
-
+	private void updateChatFile() {
+		try{
+			this.writer = new PrintWriter("chat.txt", "UTF-8");
+		}
+		catch (Exception ex){
+			System.out.println("Error creating chat.txt \n" + ex.getMessage());
+		}
+		for (ChatMessage msg : msgs){
+			writer.println(msg.getMessage());
+		}
+		writer.close();
+	}
 	// For debugging mainly
 	private void display(String msg) {
 		System.out.println(msg);
@@ -101,6 +117,7 @@ public class Server {
 		String message = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm);  // Add to msgs
+		updateChatFile();
 		String messageLf = "Admin:" + message + "\n";
 		// display message on console or GUI
 		System.out.print(messageLf);
@@ -121,6 +138,7 @@ public class Server {
 		String msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
+		updateChatFile();
 		// scan the array list until we found the Id
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
@@ -157,6 +175,7 @@ public class Server {
 			// found it
 			if(cm.getID() == id) {
 				msgs.remove(i);
+				updateChatFile();
 				return;
 			}
 		}
@@ -174,6 +193,7 @@ public class Server {
 		String msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
+		updateChatFile();
 		// scan the array list until we found the Id
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
