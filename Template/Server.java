@@ -14,35 +14,19 @@ public class Server {
 	private static int uniqueId;
 	// an ArrayList to keep the list of the Client
 	private ArrayList<ClientThread> al;
-	// if I am in a GUI
-	private ServerGUI sg;
-	// to display time
-	private SimpleDateFormat sdf;
 	// the port number to listen for connection
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
-	
 
-	/*
-	 *  server constructor that receive the port to listen to for connection as parameter
-	 *  in console
-	 */
+
 	public Server(int port) {
-		this(port, null);
-	}
-	
-	public Server(int port, ServerGUI sg) {
-		// GUI or not
-		this.sg = sg;
 		// the port
 		this.port = port;
-		// to display hh:mm:ss
-		sdf = new SimpleDateFormat("HH:mm:ss");
 		// ArrayList for the Client list
 		al = new ArrayList<ClientThread>();
 	}
-	
+
 	public void start() {
 		keepGoing = true;
 		/* create socket server and wait for connection requests */
@@ -56,7 +40,7 @@ public class Server {
 			{
 				// format message saying we are waiting
 				display("Server waiting for Clients on port " + port + ".");
-				
+
 				Socket socket = serverSocket.accept();  	// accept connection
 				// if I was asked to stop
 				if(!keepGoing)
@@ -71,9 +55,9 @@ public class Server {
 				for(int i = 0; i < al.size(); ++i) {
 					ClientThread tc = al.get(i);
 					try {
-					tc.sInput.close();
-					tc.sOutput.close();
-					tc.socket.close();
+						tc.sInput.close();
+						tc.sOutput.close();
+						tc.socket.close();
 					}
 					catch(IOException ioE) {
 						// not much I can do
@@ -86,13 +70,13 @@ public class Server {
 		}
 		// something went bad
 		catch (IOException e) {
-            String msg = sdf.format(new Date()) + " Exception on new ServerSocket: " + e + "\n";
+			String msg = " Exception on new ServerSocket: " + e + "\n";
 			display(msg);
 		}
 	}		
-    /*
-     * For the GUI to stop the server
-     */
+	/*
+	 * For the GUI to stop the server
+	 */
 	protected void stop() {
 		keepGoing = false;
 		// connect to myself as Client to exit statement 
@@ -104,23 +88,21 @@ public class Server {
 			// nothing I can really do
 		}
 	}
-	/*
-	 * Display an event (not a message) to the console or the GUI
-	 */
+
+
+	// For debugging mainly
 	private void display(String msg) {
-		String time = sdf.format(new Date()) + " " + msg;
-		System.out.println(time);
+		System.out.println(msg);
 	}
+
 	/*
 	 *  to broadcast a message to all Clients
 	 */
 	private synchronized void broadcast(String message) {
-		// add HH:mm:ss and \n to the message
-		String time = sdf.format(new Date());
-		String messageLf = time + " " + message + "\n";
+		String messageLf = message + "\n";
 		// display message on console or GUI
 		System.out.print(messageLf);
-		
+
 		// we loop in reverse order in case we would have to remove a Client
 		// because it has disconnected
 		for(int i = al.size(); --i >= 0;) {
@@ -128,50 +110,42 @@ public class Server {
 			// try to write to the Client if it fails remove it from the list
 			if(!ct.writeMsg(messageLf)) {
 				al.remove(i);
-				display("Disconnected Client " + ct.username + " removed from list.");
 			}
 		}
 	}
 
 	// for a client who logoff using the LOGOUT message
-	synchronized void remove(int id) {
+	synchronized void sendMessage(String msg, int id) {
 		// scan the array list until we found the Id
 		for(int i = 0; i < al.size(); ++i) {
 			ClientThread ct = al.get(i);
-			// found it
 			if(ct.id == id) {
-				al.remove(i);
+				//TODO: encrypt, store in chat.txt
+				if(!ct.writeMsg(ct.username+": "+msg+"\n")) {
+					al.remove(id);
+				}
 				return;
 			}
 		}
 	}
-	
-	/*
-	 *  To run as a console application just open a console window and: 
-	 * > java Server
-	 * > java Server portNumber
-	 * If the port number is not specified 1500 is used
-	 */ 
+
+	synchronized void sendImage(String msg, int id) {
+		// scan the array list until we found the Id
+		for(int i = 0; i < al.size(); ++i) {
+			ClientThread ct = al.get(i);
+			if(ct.id == id) {
+				// TODO: Send as bytes, encrypt.
+				if(!ct.writeMsg(msg+"\n")) {
+					al.remove(id);
+				}
+				return;
+			}
+		}
+	}
+
 	public static void main(String[] args) {
 		// start server on port 1500 unless a PortNumber is specified 
 		int portNumber = 1500;
-		switch(args.length) {
-			case 1:
-				try {
-					portNumber = Integer.parseInt(args[0]);
-				}
-				catch(Exception e) {
-					System.out.println("Invalid port number.");
-					System.out.println("Usage is: > java Server [portNumber]");
-					return;
-				}
-			case 0:
-				break;
-			default:
-				System.out.println("Usage is: > java Server [portNumber]");
-				return;
-				
-		}
 		// create a server object and start it
 		Server server = new Server(portNumber);
 		server.start();
@@ -183,16 +157,10 @@ public class Server {
 		Socket socket;
 		ObjectInputStream sInput;
 		ObjectOutputStream sOutput;
-		// my unique id (easier for deconnection)
 		int id;
-		// the Username of the Client
 		String username;
-		// the only type of message a will receive
 		ChatMessage cm;
-		// the date I connect
-		String date;
 
-		// Constructore
 		ClientThread(Socket socket) {
 			// a unique id
 			id = ++uniqueId;
@@ -212,18 +180,13 @@ public class Server {
 				display("Exception creating new Input/output Streams: " + e);
 				return;
 			}
-			// have to catch ClassNotFoundException
-			// but I read a String, I am sure it will work
 			catch (ClassNotFoundException e) {
 			}
-            date = new Date().toString() + "\n";
 		}
 
 		// what will run forever
 		public void run() {
-			// to loop until LOGOUT
-			boolean keepGoing = true;
-			while(keepGoing) {
+			while(true) {
 				// read a String (which is an object)
 				try {
 					cm = (ChatMessage) sInput.readObject();
@@ -235,35 +198,25 @@ public class Server {
 				catch(ClassNotFoundException e2) {
 					break;
 				}
-				// the messaage part of the ChatMessage
 				String message = cm.getMessage();
 
-				// Switch on the type of message receive
+				// Type of message
 				switch(cm.getType()) {
-
+				case ChatMessage.BROADCAST:
+					broadcast("Admin: " + message);
+					break;
 				case ChatMessage.MESSAGE:
-					broadcast(username + ": " + message);
+					sendMessage(message,id);
 					break;
-				case ChatMessage.LOGOUT:
-					display(username + " disconnected with a LOGOUT message.");
-					keepGoing = false;
-					break;
-				case ChatMessage.WHOISIN:
-					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");
-					// scan al the users connected
-					for(int i = 0; i < al.size(); ++i) {
-						ClientThread ct = al.get(i);
-						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
-					}
+				case ChatMessage.IMAGE:
+					sendImage(message,id);
 					break;
 				}
 			}
-			// remove myself from the arrayList containing the list of the
-			// connected Clients
-			remove(id);
+			//remove(id);
 			close();
 		}
-		
+
 		// try to close everything
 		private void close() {
 			// try to close the connection
@@ -303,104 +256,3 @@ public class Server {
 		}
 	}
 }
-
-
-
-class ClientHandler implements Runnable {
-	Socket s; // this is socket on the server side that connects to the CLIENT
-	int num; // keeps track of its number just for identifying purposes
-	String name; // Name of Client
-
-	ClientHandler(Socket s, int n) {
-		this.s = s;
-		num = n;
-	}
-
-	// This is the client handling code
-	// This keeps running handling client requests 
-	// after initially sending some stuff to the client
-	public void run() { 
-		Scanner in;
-		PrintWriter out;
-		
-		try {
-			// 1. GET SOCKET IN/OUT STREAMS
-			in = new Scanner(new BufferedInputStream(s.getInputStream())); 
-			out = new PrintWriter(new BufferedOutputStream(s.getOutputStream()));
-			int response = 0;
-			
-			// 2. PRINT SOME STUFF TO THE CLIENT
-			if (name.contains("admin")) {
-				while (response != 1 && response != 2 && response != 3) {
-					// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
-					out.println("1. Broadcast message to all clients.");
-					out.flush();
-					out.println("2. List messages so far.");
-					out.flush();
-					out.println("3. Deleted a selected message");
-					out.flush();
-					response = Integer.parseInt(in.nextLine());
-					}
-				handleAdminRequest(response);
-			}
-			else {
-			while (response != '1' && response != '2') {
-			// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
-			out.println("1. Send a txt message to the server.");
-			out.flush();
-			out.println("2. Send a image file to the server.");
-			out.flush();
-			response = Integer.parseInt(in.nextLine());// (int) in.nextInt();
-			}
-			handleRequest(response);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		// This handling code dies after doing all the printing
-	} // end of method run()
-	
-	void handleRequest(int c) {
-		if (c == 1){
-			chat();
-		}
-		else{
-			uploadImage();
-		}
-	}
-	
-	void chat(){
-		// TODO: Encrypt, save to chat.txt
-		System.out.println("Called chat() from server-side");
-	}
-	
-	void uploadImage(){
-		
-	}
-	
-	void handleAdminRequest(int c){
-		if (c == 1){
-			broadcast();
-		}
-		else if (c == 2){
-				
-		}
-		else{
-			deleteMessage();
-		}
-	}
-	
-void broadcast() {
-		
-}
-
-void listHistory() {
-	// TODO: Decrypt, load from chat.txt
-}
-
-void deleteMessage() {
-	
-}
-
-} // end of class ClientHandler

@@ -13,7 +13,7 @@ public class Client  {
 	private ObjectInputStream sInput;		// to read from the socket
 	private ObjectOutputStream sOutput;		// to write on the socket
 	private Socket socket;
-	
+
 	// the server, the port and the username
 	private String server, username;
 	private int port;
@@ -28,7 +28,7 @@ public class Client  {
 		this.port = port;
 		this.username = username;
 	}
-	
+
 	/*
 	 * To start the dialog
 	 */
@@ -42,10 +42,10 @@ public class Client  {
 			display("Error connectiong to server:" + ec);
 			return false;
 		}
-		
+
 		String msg = "Connection accepted " + socket.getInetAddress() + ":" + socket.getPort();
 		display(msg);
-	
+
 		/* Creating both Data Stream */
 		try
 		{
@@ -58,7 +58,7 @@ public class Client  {
 		}
 
 		// creates the Thread to listen from the server 
-		new ListenFromServer().start();
+		new ServerListener().start();
 		// Send our username to the server this is the only message that we
 		// will send as a String. All other messages will be ChatMessage objects
 		try
@@ -80,7 +80,7 @@ public class Client  {
 	private void display(String msg) {
 		System.out.println(msg);      // println in console mode
 	}
-	
+
 	/*
 	 * To send a message to the server
 	 */
@@ -106,99 +106,86 @@ public class Client  {
 			if(sOutput != null) sOutput.close();
 		}
 		catch(Exception e) {} // not much else I can do
-        try{
+		try{
 			if(socket != null) socket.close();
 		}
 		catch(Exception e) {} // not much else I can do
-			
+
 	}
-	/*
-	 * To start the Client in console mode use one of the following command
-	 * > java Client
-	 * > java Client username
-	 * > java Client username portNumber
-	 * > java Client username portNumber serverAddress
-	 * at the console prompt
-	 * If the portNumber is not specified 1500 is used
-	 * If the serverAddress is not specified "localHost" is used
-	 * If the username is not specified "Anonymous" is used
-	 * > java Client 
-	 * is equivalent to
-	 * > java Client Anonymous 1500 localhost 
-	 * are eqquivalent
-	 * 
-	 * In console mode, if an error occurs the program simply stops
-	 * when a GUI id used, the GUI is informed of the disconnection
-	 */
+
 	public static void main(String[] args) {
+
+		// wait for messages from user
+		Scanner scan = new Scanner(System.in);
+
 		// default values
 		int portNumber = 1500;
 		String serverAddress = "localhost";
-		String userName = "Anonymous";
+		String userName;
+		System.out.println("Enter username:");
+		userName = scan.nextLine();
+		boolean isAdmin = userName.equalsIgnoreCase("admin");
+		String msg = "";
 
-		// depending of the number of arguments provided we fall through
-		switch(args.length) {
-			// > javac Client username portNumber serverAddr
-			case 3:
-				serverAddress = args[2];
-			// > javac Client username portNumber
-			case 2:
-				try {
-					portNumber = Integer.parseInt(args[1]);
-				}
-				catch(Exception e) {
-					System.out.println("Invalid port number.");
-					System.out.println("Usage is: > java Client [username] [portNumber] [serverAddress]");
-					return;
-				}
-			// > javac Client username
-			case 1: 
-				userName = args[0];
-			// > java Client
-			case 0:
-				break;
-			// invalid number of arguments
-			default:
-				System.out.println("Usage is: > java Client [username] [portNumber] {serverAddress]");
-			return;
-		}
 		// create the Client object
 		Client client = new Client(serverAddress, portNumber, userName);
-		// test if we can start the connection to the Server
-		// if it failed nothing we can do
 		if(!client.start())
 			return;
-		
-		// wait for messages from user
-		Scanner scan = new Scanner(System.in);
-		// loop forever for message from the user
-		while(true) {
-			System.out.print("> ");
-			// read message from user
-			String msg = scan.nextLine();
-			// logout if message is LOGOUT
-			if(msg.equalsIgnoreCase("LOGOUT")) {
-				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
-				// break to do the disconnect
-				break;
+
+		try {
+			if (isAdmin){
+				while (true) {
+					// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
+					System.out.println("1. Broadcast message to all clients.");
+					System.out.println("2. List messages so far.");
+					System.out.println("3. Deleted a selected message");
+					System.out.print("> ");
+					msg = scan.nextLine();
+					if(msg.contains("3")) {
+						System.out.print("> ");
+						msg = scan.nextLine();
+						client.sendMessage(new ChatMessage(ChatMessage.DELETE, msg));
+					}
+					else if(msg.contains("2")) {
+						System.out.print("> ");
+						msg = scan.nextLine();
+						client.sendMessage(new ChatMessage(ChatMessage.LIST, msg));				
+					}
+					else if(msg.contains("1")) {
+						System.out.print("> ");
+						msg = scan.nextLine();
+						client.sendMessage(new ChatMessage(ChatMessage.BROADCAST, msg));
+					}
+				}
 			}
-			// message WhoIsIn
-			else if(msg.equalsIgnoreCase("WHOISIN")) {
-				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
-			}
-			else {				// default to ordinary message
-				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
+			else{
+					while (true) {
+						// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
+						System.out.println("1. Send a txt message to the server.");
+						System.out.println("2. Send a image file to the server.");
+						System.out.print("> ");
+						msg = scan.nextLine();
+						if(msg.contains("2")) {
+							System.out.print("> ");
+							msg = scan.nextLine();
+							client.sendMessage(new ChatMessage(ChatMessage.IMAGE, msg));
+						}
+						else if(msg.contains("1")) {
+							System.out.print("> ");
+							msg = scan.nextLine();
+							client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));				
+						}
+					}
 			}
 		}
-		// done disconnect
-		client.disconnect();	
+		catch (Exception ex) {
+			scan.close();
+			client.disconnect();
+		}
 	}
 
-	/*
-	 * a class that waits for the message from the server and append them to the JTextArea
-	 * if we have a GUI or simply System.out.println() it in console mode
-	 */
-	class ListenFromServer extends Thread {
+
+	class ServerListener extends Thread {
 
 		public void run() {
 			while(true) {
@@ -217,30 +204,5 @@ public class Client  {
 				}
 			}
 		}
-	}
-}
-
-
-class ServerListener implements Runnable {
-	Client c;
-	Scanner in; // this is used to read which is a blocking call
-
-	ServerListener(Client c, Socket s) {
-		try {
-			this.c = c;
-			in = new Scanner(new BufferedInputStream(s.getInputStream()));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	@Override
-	public void run() {
-		while (true) { // run forever
-			//System.out.println("Client - waiting to read");
-			String msg = in.nextLine();
-			//c.handleChat(msg);
-		}
-
 	}
 }
