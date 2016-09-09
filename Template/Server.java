@@ -13,18 +13,21 @@ public class Server {
 	// a unique ID for each connection
 	private static int uniqueId;
 	// an ArrayList to keep the list of the Client
-	private ArrayList<ClientThread> al;
+	private ArrayList<ClientHandler> clients;
+	private ArrayList<ChatMessage> msgs;
 	// the port number to listen for connection
 	private int port;
 	// the boolean that will be turned of to stop the server
 	private boolean keepGoing;
+	private File file = new File("chat.txt");
 
 
 	public Server(int port) {
 		// the port
 		this.port = port;
 		// ArrayList for the Client list
-		al = new ArrayList<ClientThread>();
+		clients = new ArrayList<ClientHandler>();
+		msgs = new ArrayList<ChatMessage>();
 	}
 
 	public void start() {
@@ -45,15 +48,15 @@ public class Server {
 				// if I was asked to stop
 				if(!keepGoing)
 					break;
-				ClientThread t = new ClientThread(socket);  // make a thread of it
-				al.add(t);									// save it in the ArrayList
+				ClientHandler t = new ClientHandler(socket);  // make a thread of it
+				clients.add(t);									// save it in the ArrayList
 				t.start();
 			}
-			// I was asked to stop
+
 			try {
 				serverSocket.close();
-				for(int i = 0; i < al.size(); ++i) {
-					ClientThread tc = al.get(i);
+				for(int i = 0; i < clients.size(); ++i) {
+					ClientHandler tc = clients.get(i);
 					try {
 						tc.sInput.close();
 						tc.sOutput.close();
@@ -68,15 +71,11 @@ public class Server {
 				display("Exception closing the server and clients: " + e);
 			}
 		}
-		// something went bad
 		catch (IOException e) {
 			String msg = " Exception on new ServerSocket: " + e + "\n";
 			display(msg);
 		}
-	}		
-	/*
-	 * For the GUI to stop the server
-	 */
+	}
 	protected void stop() {
 		keepGoing = false;
 		// connect to myself as Client to exit statement 
@@ -98,45 +97,90 @@ public class Server {
 	/*
 	 *  to broadcast a message to all Clients
 	 */
-	private synchronized void broadcast(String message) {
-		String messageLf = message + "\n";
+	private synchronized void broadcast(ChatMessage cm) {
+		String message = cm.getMessage();
+		cm.setID(ChatMessage.incrementCount());
+		msgs.add(cm);  // Add to msgs
+		String messageLf = "Admin:" + message + "\n";
 		// display message on console or GUI
 		System.out.print(messageLf);
 
 		// we loop in reverse order in case we would have to remove a Client
 		// because it has disconnected
-		for(int i = al.size(); --i >= 0;) {
-			ClientThread ct = al.get(i);
+		for(int i = clients.size(); --i >= 0;) {
+			ClientHandler ct = clients.get(i);
 			// try to write to the Client if it fails remove it from the list
 			if(!ct.writeMsg(messageLf)) {
-				al.remove(i);
+				clients.remove(i);
 			}
 		}
 	}
 
-	// for a client who logoff using the LOGOUT message
-	synchronized void sendMessage(String msg, int id) {
+
+	synchronized void sendMessage(ChatMessage cm, int id) {
+		String msg = cm.getMessage();
+		cm.setID(ChatMessage.incrementCount());
+		msgs.add(cm); // Add to msgs
 		// scan the array list until we found the Id
-		for(int i = 0; i < al.size(); ++i) {
-			ClientThread ct = al.get(i);
-			if(ct.id == id) {
+		for(int i = 0; i < clients.size(); ++i) {
+			ClientHandler ct = clients.get(i);
+			if(ct.clientID == id) {
 				//TODO: encrypt, store in chat.txt
-				if(!ct.writeMsg(ct.username+": "+msg+"\n")) {
-					al.remove(id);
+				msg = (ct.username+": "+msg+"\n");
+				if(!ct.writeMsg(msg)) {
+					clients.remove(id);
 				}
 				return;
 			}
 		}
 	}
 
-	synchronized void sendImage(String msg, int id) {
+	void listMessages(int clientID){
+		//TODO decrypt
+		for(int i = 0; i < clients.size(); ++i) {
+			ClientHandler ct = clients.get(i);
+			if(ct.clientID == clientID) {
+				for(int j = 0; j < msgs.size(); ++j) {
+					ChatMessage cm = msgs.get(j);
+					ct.writeMsg("Message with ID " + Integer.toString(cm.getID()) + ": >"+cm.getMessage()+"\n");
+				}
+			}
+		}
+
+	}
+
+	synchronized void deleteMessage(int id){
+		//TODO
 		// scan the array list until we found the Id
-		for(int i = 0; i < al.size(); ++i) {
-			ClientThread ct = al.get(i);
-			if(ct.id == id) {
+		for(int i = 0; i < msgs.size(); ++i) {
+			ChatMessage cm = msgs.get(i);
+			// found it
+			if(cm.getID() == id) {
+				msgs.remove(i);
+				return;
+			}
+		}
+	}
+
+	String encryptMessage(String txt){
+		return txt;
+	}
+
+	String decryptMessage(String txt){
+		return txt;
+	}
+
+	synchronized void sendImage(ChatMessage cm, int id) {
+		String msg = cm.getMessage();
+		cm.setID(ChatMessage.incrementCount());
+		msgs.add(cm); // Add to msgs
+		// scan the array list until we found the Id
+		for(int i = 0; i < clients.size(); ++i) {
+			ClientHandler ct = clients.get(i);
+			if(ct.clientID == id) {
 				// TODO: Send as bytes, encrypt.
 				if(!ct.writeMsg(msg+"\n")) {
-					al.remove(id);
+					clients.remove(id);
 				}
 				return;
 			}
@@ -151,19 +195,19 @@ public class Server {
 		server.start();
 	}
 
-	/** One instance of this thread will run for each client */
-	class ClientThread extends Thread {
+
+	class ClientHandler extends Thread {
 		// the socket where to listen/talk
 		Socket socket;
 		ObjectInputStream sInput;
 		ObjectOutputStream sOutput;
-		int id;
+		int clientID;
 		String username;
 		ChatMessage cm;
 
-		ClientThread(Socket socket) {
+		ClientHandler(Socket socket) {
 			// a unique id
-			id = ++uniqueId;
+			clientID = ++uniqueId;
 			this.socket = socket;
 			/* Creating both Data Stream */
 			System.out.println("Thread trying to create Object Input/Output Streams");
@@ -198,18 +242,23 @@ public class Server {
 				catch(ClassNotFoundException e2) {
 					break;
 				}
-				String message = cm.getMessage();
 
 				// Type of message
 				switch(cm.getType()) {
 				case ChatMessage.BROADCAST:
-					broadcast("Admin: " + message);
+					broadcast(cm);
 					break;
 				case ChatMessage.MESSAGE:
-					sendMessage(message,id);
+					sendMessage(cm,clientID);
 					break;
 				case ChatMessage.IMAGE:
-					sendImage(message,id);
+					sendImage(cm,clientID);
+					break;
+				case ChatMessage.LIST:
+					listMessages(clientID);
+					break;
+				case ChatMessage.DELETE:
+					deleteMessage(cm.getID());
 					break;
 				}
 			}

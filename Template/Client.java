@@ -78,7 +78,7 @@ public class Client  {
 	 * To send a message to the console or the GUI
 	 */
 	private void display(String msg) {
-		System.out.println(msg);      // println in console mode
+		System.out.println(msg);
 	}
 
 	/*
@@ -112,7 +112,7 @@ public class Client  {
 		catch(Exception e) {} // not much else I can do
 
 	}
-
+	
 	public static void main(String[] args) {
 
 		// wait for messages from user
@@ -122,11 +122,12 @@ public class Client  {
 		int portNumber = 1500;
 		String serverAddress = "localhost";
 		String userName;
+		String msg = "";
+		
+		// Get username
 		System.out.println("Enter username:");
 		userName = scan.nextLine();
 		boolean isAdmin = userName.equalsIgnoreCase("admin");
-		String msg = "";
-
 		// create the Client object
 		Client client = new Client(serverAddress, portNumber, userName);
 		if(!client.start())
@@ -142,40 +143,41 @@ public class Client  {
 					System.out.print("> ");
 					msg = scan.nextLine();
 					if(msg.contains("3")) {
-						System.out.print("> ");
-						msg = scan.nextLine();
-						client.sendMessage(new ChatMessage(ChatMessage.DELETE, msg));
+						System.out.println("Enter ID of message to delete:");
+						int idToDelete = scan.nextInt();
+						client.sendMessage(new ChatMessage(ChatMessage.DELETE, "",idToDelete));
 					}
 					else if(msg.contains("2")) {
-						System.out.print("> ");
-						msg = scan.nextLine();
-						client.sendMessage(new ChatMessage(ChatMessage.LIST, msg));				
+						client.sendMessage(new ChatMessage(ChatMessage.LIST, "",ChatMessage.count));				
 					}
 					else if(msg.contains("1")) {
 						System.out.print("> ");
 						msg = scan.nextLine();
-						client.sendMessage(new ChatMessage(ChatMessage.BROADCAST, msg));
+						// increment message counter
+						client.sendMessage(new ChatMessage(ChatMessage.BROADCAST, msg,ChatMessage.incrementCount()));
 					}
 				}
 			}
 			else{
-					while (true) {
-						// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
-						System.out.println("1. Send a txt message to the server.");
-						System.out.println("2. Send a image file to the server.");
+				while (true) {
+					// 3. KEEP LISTENING AND RESPONDING TO CLIENT REQUESTS
+					System.out.println("1. Send a txt message to the server.");
+					System.out.println("2. Send a image file to the server.");
+					System.out.print("> ");
+					msg = scan.nextLine();
+					if(msg.contains("2")) {
 						System.out.print("> ");
 						msg = scan.nextLine();
-						if(msg.contains("2")) {
-							System.out.print("> ");
-							msg = scan.nextLine();
-							client.sendMessage(new ChatMessage(ChatMessage.IMAGE, msg));
-						}
-						else if(msg.contains("1")) {
-							System.out.print("> ");
-							msg = scan.nextLine();
-							client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));				
-						}
+						// increment msg counter
+						client.sendMessage(new ChatMessage(ChatMessage.IMAGE, msg,ChatMessage.incrementCount()));
 					}
+					else if(msg.contains("1")) {
+						System.out.print("> ");
+						msg = scan.nextLine();
+						// Increment msg counter
+						client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg,ChatMessage.incrementCount()));
+					}
+				}
 			}
 		}
 		catch (Exception ex) {
