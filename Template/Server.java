@@ -101,7 +101,7 @@ public class Server {
 			System.out.println("Error creating chat.txt \n" + ex.getMessage());
 		}
 		for (ChatMessage msg : msgs){
-			writer.println(msg.getMessage());
+			writer.println(Encryption.decryptMessage(msg.getMessage()));
 		}
 		writer.close();
 	}
@@ -109,25 +109,22 @@ public class Server {
 	private void display(String msg) {
 		System.out.println(msg);
 	}
-
+	
 	/*
 	 *  to broadcast a message to all Clients
 	 */
 	private synchronized void broadcast(ChatMessage cm) {
-		String message = cm.getMessage();
+		byte[] message = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm);  // Add to msgs
 		updateChatFile();
-		String messageLf = "Admin:" + message + "\n";
-		// display message on console or GUI
-		System.out.print(messageLf);
 
 		// we loop in reverse order in case we would have to remove a Client
 		// because it has disconnected
 		for(int i = clients.size(); --i >= 0;) {
 			ClientHandler ct = clients.get(i);
 			// try to write to the Client if it fails remove it from the list
-			if(!ct.writeMsg(messageLf)) {
+			if(!ct.writeMsg(message)) {
 				clients.remove(i);
 			}
 		}
@@ -135,7 +132,7 @@ public class Server {
 
 
 	synchronized void sendMessage(ChatMessage cm, int id) {
-		String msg = cm.getMessage();
+		byte[] msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
 		updateChatFile();
@@ -143,8 +140,7 @@ public class Server {
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
 			if(ct.clientID == id) {
-				//TODO: encrypt, store in chat.txt
-				msg = (ct.username+": "+msg+"\n");
+				// Add username? msg = (ct.username+": "+msg+"\n");
 				if(!ct.writeMsg(msg)) {
 					clients.remove(id);
 				}
@@ -154,13 +150,12 @@ public class Server {
 	}
 
 	void listMessages(int clientID){
-		//TODO decrypt
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
 			if(ct.clientID == clientID) {
 				for(int j = 0; j < msgs.size(); ++j) {
 					ChatMessage cm = msgs.get(j);
-					ct.writeMsg("Message with ID " + Integer.toString(cm.getID()) + ": >"+cm.getMessage()+"\n");
+					ct.writeMsg(cm);
 				}
 			}
 		}
@@ -181,16 +176,9 @@ public class Server {
 		}
 	}
 
-	String encryptMessage(String txt){
-		return txt;
-	}
-
-	String decryptMessage(String txt){
-		return txt;
-	}
-
 	synchronized void sendImage(ChatMessage cm, int id) {
-		String msg = cm.getMessage();
+		// TODO: change to use decrypt image
+		byte[] msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
 		updateChatFile();
@@ -198,8 +186,7 @@ public class Server {
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
 			if(ct.clientID == id) {
-				// TODO: Send as bytes, encrypt.
-				if(!ct.writeMsg(msg+"\n")) {
+				if(!ct.writeMsg(msg)) {
 					clients.remove(id);
 				}
 				return;
@@ -304,9 +291,9 @@ public class Server {
 		}
 
 		/*
-		 * Write a String to the Client output stream
+		 * Write a byte stream to the Client output stream
 		 */
-		private boolean writeMsg(String msg) {
+		private boolean writeMsg(byte[] msg) {
 			// if Client is still connected send the message to it
 			if(!socket.isConnected()) {
 				close();
@@ -323,5 +310,26 @@ public class Server {
 			}
 			return true;
 		}
+		/*
+		 * Write a byte stream to the Client output stream
+		 */
+		private boolean writeMsg(ChatMessage msg) {
+			// if Client is still connected send the message to it
+			if(!socket.isConnected()) {
+				close();
+				return false;
+			}
+			// write the message to the stream
+			try {
+				sOutput.writeObject(msg);
+			}
+			// if an error occurs, do not abort just inform the user
+			catch(IOException e) {
+				display("Error sending message to " + username);
+				display(e.toString());
+			}
+			return true;
+		}
+		
 	}
 }

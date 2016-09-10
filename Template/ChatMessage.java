@@ -18,12 +18,18 @@ public class ChatMessage implements Serializable {
 	static final int MESSAGE = 1, IMAGE = 2, BROADCAST = 3, LIST = 4, DELETE = 5;
 	public static int count = 0;
 	private int type;
-	private String message;
+	private byte[] message;
 	private int id;
 	// constructor
 	ChatMessage(int type, String message, int ID) {
 		this.type = type;
-		this.message = message;
+		if (type == MESSAGE || type == BROADCAST){
+		this.message = Encryption.encryptMessage(message);
+		}
+		else{
+			//TODO: Check if Image, apply Image encryption
+			this.message = message.getBytes();
+		}
 		this.id = ID;
 	}
 	
@@ -31,7 +37,7 @@ public class ChatMessage implements Serializable {
 	int getType() {
 		return type;
 	}
-	String getMessage() {
+	byte[] getMessage() {
 		return message;
 	}
 	int getID() {

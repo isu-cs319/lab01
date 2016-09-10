@@ -73,7 +73,7 @@ public class Client  {
 		// success we inform the caller that it worked
 		return true;
 	}
-
+	
 	/*
 	 * To send a message to the console or the GUI
 	 */
@@ -166,13 +166,13 @@ public class Client  {
 					System.out.print("> ");
 					msg = scan.nextLine();
 					if(msg.contains("2")) {
-						System.out.print("> ");
+						System.out.print("Input Image data:\n> ");
 						msg = scan.nextLine();
 						// increment msg counter
 						client.sendMessage(new ChatMessage(ChatMessage.IMAGE, msg,ChatMessage.incrementCount()));
 					}
 					else if(msg.contains("1")) {
-						System.out.print("> ");
+						System.out.print("Input text:\n> ");
 						msg = scan.nextLine();
 						// Increment msg counter
 						client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg,ChatMessage.incrementCount()));
@@ -192,7 +192,9 @@ public class Client  {
 		public void run() {
 			while(true) {
 				try {
-					String msg = (String) sInput.readObject();
+					byte[] bytes = (byte[]) sInput.readObject();
+					String msg = Encryption.decryptMessage(bytes);
+					//String msg = (String) sInput.readObject();
 					// if console mode print the message and add back the prompt
 					System.out.println(msg);
 					System.out.print("> ");
