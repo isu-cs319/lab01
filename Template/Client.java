@@ -192,9 +192,14 @@ public class Client  {
 		public void run() {
 			while(true) {
 				try {
-					byte[] bytes = (byte[]) sInput.readObject();
-					String msg = Encryption.decryptMessage(bytes);
-					//String msg = (String) sInput.readObject();
+					ChatMessage cm = (ChatMessage) sInput.readObject();
+					String msg = "";
+					if (cm.getType() == cm.MESSAGE || cm.getType() == cm.BROADCAST){
+						msg = Encryption.decryptMessage(cm.getMessage());
+					}
+					else if (cm.getType() == cm.IMAGE){
+						//TODO: decrypt image
+					}
 					// if console mode print the message and add back the prompt
 					System.out.println(msg);
 					System.out.print("> ");

@@ -114,7 +114,6 @@ public class Server {
 	 *  to broadcast a message to all Clients
 	 */
 	private synchronized void broadcast(ChatMessage cm) {
-		byte[] message = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm);  // Add to msgs
 		updateChatFile();
@@ -124,7 +123,7 @@ public class Server {
 		for(int i = clients.size(); --i >= 0;) {
 			ClientHandler ct = clients.get(i);
 			// try to write to the Client if it fails remove it from the list
-			if(!ct.writeMsg(message)) {
+			if(!ct.writeCm(cm)) {
 				clients.remove(i);
 			}
 		}
@@ -132,7 +131,6 @@ public class Server {
 
 
 	synchronized void sendMessage(ChatMessage cm, int id) {
-		byte[] msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
 		updateChatFile();
@@ -141,7 +139,7 @@ public class Server {
 			ClientHandler ct = clients.get(i);
 			if(ct.clientID == id) {
 				// Add username? msg = (ct.username+": "+msg+"\n");
-				if(!ct.writeMsg(msg)) {
+				if(!ct.writeCm(cm)) {
 					clients.remove(id);
 				}
 				return;
@@ -155,7 +153,7 @@ public class Server {
 			if(ct.clientID == clientID) {
 				for(int j = 0; j < msgs.size(); ++j) {
 					ChatMessage cm = msgs.get(j);
-					ct.writeMsg(cm);
+					ct.writeCm(cm);
 				}
 			}
 		}
@@ -178,7 +176,6 @@ public class Server {
 
 	synchronized void sendImage(ChatMessage cm, int id) {
 		// TODO: change to use decrypt image
-		byte[] msg = cm.getMessage();
 		cm.setID(ChatMessage.incrementCount());
 		msgs.add(cm); // Add to msgs
 		updateChatFile();
@@ -186,7 +183,7 @@ public class Server {
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
 			if(ct.clientID == id) {
-				if(!ct.writeMsg(msg)) {
+				if(!ct.writeCm(cm)) {
 					clients.remove(id);
 				}
 				return;
@@ -293,7 +290,7 @@ public class Server {
 		/*
 		 * Write a byte stream to the Client output stream
 		 */
-		private boolean writeMsg(byte[] msg) {
+		/*private boolean writeMsg(byte[] msg) {
 			// if Client is still connected send the message to it
 			if(!socket.isConnected()) {
 				close();
@@ -309,11 +306,12 @@ public class Server {
 				display(e.toString());
 			}
 			return true;
-		}
+		}*/
+		
 		/*
-		 * Write a byte stream to the Client output stream
+		 * Write a ChatMessage to the Client output stream
 		 */
-		private boolean writeMsg(ChatMessage msg) {
+		private boolean writeCm(ChatMessage msg) {
 			// if Client is still connected send the message to it
 			if(!socket.isConnected()) {
 				close();
