@@ -23,8 +23,11 @@ public class ChatMessage implements Serializable {
 	// constructor
 	ChatMessage(int type, String message, int ID) {
 		this.type = type;
-		if (type == MESSAGE || type == BROADCAST){
+		if (type == MESSAGE || type == BROADCAST || type == LIST){
 		this.message = Encryption.encryptMessage(message);
+		}
+		else if (type == IMAGE){
+			this.message = Encryption.encryptImage(message);
 		}
 		else{
 			//TODO: Check if Image, apply Image encryption
