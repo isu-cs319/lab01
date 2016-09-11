@@ -24,12 +24,16 @@ public class Encryption {
 		  }
 		  return bytesEncrypted;
 	}
+	
+	public static String decryptImage(byte[] img){
+		byte[] decrypted = new byte[img.length-2];
+		for (int i = 2; i < img.length; i++){
+			decrypted[i-2] = img[i];
+		}
+		return bytesToString(decrypted);
+	}
 
 	public static void main(String[] args) {
-		String msg = "Hello, my name is David.";
-		byte[] bytes = encryptMessage(msg);
-		System.out.println("Encrypted: "+ Encryption.bytesToString(bytes));
-		System.out.println("Decrypted: " + Encryption.decryptMessage(bytes));
 
 	}
 

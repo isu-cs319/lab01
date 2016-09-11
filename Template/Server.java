@@ -147,17 +147,17 @@ public class Server {
 		}
 	}
 
-	void listMessages(int clientID){
+	void listMessages(int adminID){
 		for(int i = 0; i < clients.size(); ++i) {
 			ClientHandler ct = clients.get(i);
-			if(ct.clientID == clientID) {
+			if(ct.clientID == adminID) { // Found admin
 				for(int j = 0; j < msgs.size(); ++j) {
 					ChatMessage cm = msgs.get(j);
 					ct.writeCm(cm);
+					cm = null;
 				}
 			}
 		}
-
 	}
 
 	synchronized void deleteMessage(int id){

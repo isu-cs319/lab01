@@ -194,7 +194,7 @@ public class Client  {
 				try {
 					ChatMessage cm = (ChatMessage) sInput.readObject();
 					String msg = "";
-					if (cm.getType() == cm.MESSAGE || cm.getType() == cm.BROADCAST){
+					if (cm.getType() == cm.MESSAGE || cm.getType() == cm.BROADCAST || cm.getType() == cm.LIST){
 						msg = Encryption.decryptMessage(cm.getMessage());
 					}
 					else if (cm.getType() == cm.IMAGE){

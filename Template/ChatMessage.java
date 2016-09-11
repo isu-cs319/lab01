@@ -40,6 +40,7 @@ public class ChatMessage implements Serializable {
 	byte[] getMessage() {
 		return message;
 	}
+
 	int getID() {
 		return id;
 	}
